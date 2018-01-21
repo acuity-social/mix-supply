@@ -1,0 +1,19 @@
+{
+  "name": "mix-supply",
+  "version": "1.0.0",
+  "description": "Determines how much MIX is in circulation.",
+  "main": "mix-supply.js",
+  "scripts": {
+    "start": "node mix-supply.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mix-blockchain/mix-supply.git"
+  },
+  "author": "Jonathan Brown <jbrown@mix-blockchain.org>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/mix-blockchain/mix-supply/issues"
+  },
+  "homepage": "https://github.com/mix-blockchain/mix-supply#readme"
+}
