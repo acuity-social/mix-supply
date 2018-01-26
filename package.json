@@ -15,5 +15,10 @@
   "bugs": {
     "url": "https://github.com/mix-blockchain/mix-supply/issues"
   },
-  "homepage": "https://github.com/mix-blockchain/mix-supply#readme"
+  "homepage": "https://github.com/mix-blockchain/mix-supply#readme",
+  "dependencies": {
+    "@parity/api": "^2.1.18",
+    "bignumber.js": "^5.0.0",
+    "express": "^4.16.2"
+  }
 }
