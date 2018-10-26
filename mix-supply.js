@@ -39,6 +39,6 @@ app.get('/', function (req, res) {
   });
 });
 
-app.listen(80, function () {
-  console.log('MIX Supply listening on port 80');
+app.listen(4000, function () {
+  console.log('MIX Supply listening on port 4000');
 });
