@@ -5,37 +5,30 @@ const BigNumber = require('bignumber.js');
 const express = require('express');
 const app = express();
 
-const provider = new Api.Provider.Http('http://localhost:8645');
+const provider = new Api.Provider.Http('http://127.0.0.1:8645');
 const api = new Api(provider);
 
 const abi = require('./mix_revenue.abi.json');
 const address = '0x97c7f4f8f0bbf384578a9f5754ae73f37ff49ec2';
 const contract = api.newContract(abi, address);
 
-app.get('/', function (req, res) {
+app.get('/', async function (req, res) {
 
-  api.eth.blockNumber().then((blockNumber) => {
+  let blockNumber = await api.eth.blockNumber()
+  let released = await contract.instance.getReleased.call({}, blockNumber)
+  let accounts = await api.parity.listAccounts(1000000000, null, blockNumber)
+  let total = new BigNumber(api.util.toWei(-55000000, 'ether').plus(released));
+  let promises = [];
 
-    contract.instance.getReleased.call({}, blockNumber).then((released) => {
+  for (let account of accounts) {
+    promises.push(api.eth.getBalance(account, blockNumber)
+      .then((balance) => {
+        total = total.plus(balance);
+      }));
+  }
 
-      api.parity
-        .listAccounts(1000000000, null, blockNumber)
-        .then((accounts) => {
-          var total = new BigNumber(api.util.toWei(-55000000, 'ether').plus(released));
-          var promises = [];
-
-          for (var account of accounts) {
-            promises.push(api.eth.getBalance(account, blockNumber)
-              .then((balance) => {
-                total = total.plus(balance);
-              }));
-          }
-
-          Promise.all(promises).then(() => {
-            res.json({blockNumber: blockNumber, circulatingSupply: api.util.fromWei(total, 'ether').toString()});
-          });
-        });
-    });
+  Promise.all(promises).then(() => {
+    res.json({blockNumber: blockNumber, circulatingSupply: api.util.fromWei(total, 'ether').toString()});
   });
 });
 
