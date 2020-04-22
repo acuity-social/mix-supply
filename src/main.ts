@@ -1,5 +1,3 @@
-"use strict";
-
 const Api = require('@parity/api');
 const BigNumber = require('bignumber.js');
 const express = require('express');
