@@ -32,6 +32,26 @@ app.get('/', async function (req, res) {
   });
 });
 
+app.get('/circulatingSupply', async function (req, res) {
+
+  let blockNumber = await api.eth.blockNumber()
+  let released = await contract.instance.getReleased.call({}, blockNumber)
+  let accounts = await api.parity.listAccounts(1000000000, null, blockNumber)
+  let total = new BigNumber(api.util.toWei(-55000000, 'ether').plus(released));
+  let promises = [];
+
+  for (let account of accounts) {
+    promises.push(api.eth.getBalance(account, blockNumber)
+      .then((balance) => {
+        total = total.plus(balance);
+      }));
+  }
+
+  Promise.all(promises).then(() => {
+    res.send(api.util.fromWei(total, 'ether').toString());
+  });
+});
+
 app.listen(4000, function () {
   console.log('MIX Supply listening on port 4000');
 });
