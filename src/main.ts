@@ -10,7 +10,7 @@ const abi = require('./mix_revenue.abi.json');
 const address = '0x97c7f4f8f0bbf384578a9f5754ae73f37ff49ec2';
 const contract = api.newContract(abi, address);
 
-app.get('/', async function (req, res) {
+app.get('/', async function (req: any, res: any) {
 
   let blockNumber = await api.eth.blockNumber()
   let released = await contract.instance.getReleased.call({}, blockNumber)
@@ -20,7 +20,7 @@ app.get('/', async function (req, res) {
 
   for (let account of accounts) {
     promises.push(api.eth.getBalance(account, blockNumber)
-      .then((balance) => {
+      .then((balance: number) => {
         total = total.plus(balance);
       }));
   }
@@ -30,7 +30,7 @@ app.get('/', async function (req, res) {
   });
 });
 
-app.get('/circulatingSupply', async function (req, res) {
+app.get('/circulatingSupply', async function (req: any, res: any) {
 
   let blockNumber = await api.eth.blockNumber()
   let released = await contract.instance.getReleased.call({}, blockNumber)
@@ -40,7 +40,7 @@ app.get('/circulatingSupply', async function (req, res) {
 
   for (let account of accounts) {
     promises.push(api.eth.getBalance(account, blockNumber)
-      .then((balance) => {
+      .then((balance: number) => {
         total = total.plus(balance);
       }));
   }
