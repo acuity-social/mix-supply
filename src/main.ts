@@ -1,14 +1,14 @@
-const Api = require('@parity/api')
+let Api = require('@parity/api')
 import BigNumber from 'bignumber.js'
 import express from 'express'
-const app = express()
+let app = express()
 
-const provider = new Api.Provider.Http('http://127.0.0.1:8645')
-const api = new Api(provider)
+let provider = new Api.Provider.Http('http://127.0.0.1:8645')
+let api = new Api(provider)
 
-const abi = require('./mix_revenue.abi.json')
-const address = '0x97c7f4f8f0bbf384578a9f5754ae73f37ff49ec2'
-const contract = api.newContract(abi, address)
+let abi = require('./mix_revenue.abi.json')
+let address = '0x97c7f4f8f0bbf384578a9f5754ae73f37ff49ec2'
+let contract = api.newContract(abi, address)
 
 app.get('/', async function (req: any, res: any) {
 
