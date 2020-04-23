@@ -1,6 +1,6 @@
 const Api = require('@parity/api')
-const BigNumber = require('bignumber.js')
-const express = require('express')
+import BigNumber from 'bignumber.js'
+import express from 'express'
 const app = express()
 
 const provider = new Api.Provider.Http('http://127.0.0.1:8645')
