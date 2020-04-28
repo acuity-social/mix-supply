@@ -1,55 +1,121 @@
-let Api = require('@parity/api')
-import BigNumber from 'bignumber.js'
+import levelup from 'levelup'
+import leveldown from 'leveldown'
+import Web3 from 'web3'
+import net from 'net'
 import express from 'express'
 let app = express()
+let web3: any
+let db: any
 
-let provider = new Api.Provider.Http('http://127.0.0.1:8645')
-let api = new Api(provider)
+async function getBlockReward(blockNumber: number): Promise<number> {
+  let reward = 5
+  let uncleCount = await web3.eth.getBlockUncleCount(blockNumber)
+  let uncleOffset = 0
 
-let abi = require('./mix_revenue.abi.json')
-let address = '0x97c7f4f8f0bbf384578a9f5754ae73f37ff49ec2'
-let contract = api.newContract(abi, address)
+  while (uncleOffset < uncleCount) {
+    let uncleBlock = await web3.eth.getUncle(blockNumber, uncleOffset)
+    reward += (uncleBlock.number + 8 - blockNumber) * 5 / 8
+    uncleOffset++
+  }
+  return reward
+}
 
-app.get('/', async function (req: any, res: any) {
+async function catchUp(latest: number) {
+  let blockNumber = 0
+  let total = 0
 
-  let blockNumber = await api.eth.blockNumber()
-  let released = await contract.instance.getReleased.call({}, blockNumber)
-  let accounts = await api.parity.listAccounts(1000000000, null, blockNumber)
-  let total = new BigNumber(api.util.toWei(-55000000, 'ether').plus(released))
-  let promises = []
+  try {
+    let state: any = JSON.parse(await db.get('state'))
+    blockNumber = state.blockNumber
+    total = state.total
+  }
+  catch {}
 
-  for (let account of accounts) {
-    promises.push(api.eth.getBalance(account, blockNumber)
-      .then((balance: number) => {
-        total = total.plus(balance)
-      }))
+  if (blockNumber == latest) {
+    return
   }
 
-  Promise.all(promises).then(() => {
-    res.json({blockNumber: blockNumber, circulatingSupply: api.util.fromWei(total, 'ether').toString()})
-  })
-})
-
-app.get('/circulatingSupply', async function (req: any, res: any) {
-
-  let blockNumber = await api.eth.blockNumber()
-  let released = await contract.instance.getReleased.call({}, blockNumber)
-  let accounts = await api.parity.listAccounts(1000000000, null, blockNumber)
-  let total = new BigNumber(api.util.toWei(-55000000, 'ether').plus(released))
-  let promises = []
-
-  for (let account of accounts) {
-    promises.push(api.eth.getBalance(account, blockNumber)
-      .then((balance: number) => {
-        total = total.plus(balance)
-      }))
+  while (blockNumber < latest) {
+    blockNumber++
+    total += await getBlockReward(blockNumber)
+    if (blockNumber % 10000 == 0) {
+      console.log('Block:', blockNumber.toLocaleString(), 'Mined:', total.toLocaleString())
+    }
   }
 
-  Promise.all(promises).then(() => {
-    res.send(api.util.fromWei(total, 'ether').toString())
-  })
-})
+  await db.put('state', JSON.stringify({
+    blockNumber: blockNumber,
+    total: total,
+  }))
+}
 
-app.listen(4000, function () {
-  console.log('MIX Supply listening on port 4000')
-})
+async function getReleased(blockNumber: number): Promise<number> {
+  let dailyAmount = 50000
+  let block: any = await web3.eth.getBlock(blockNumber)
+  let released = 0
+  let elapsed = Math.floor((block.timestamp - 1493286039) / 86400);
+
+  while ((dailyAmount != 0) && (elapsed > 0)) {
+    released += ((elapsed < 200) ? elapsed : 200) * dailyAmount;
+    dailyAmount -= 5000
+    elapsed -= 200
+  }
+
+  return released
+}
+
+async function startServer() {
+  app.get('/', async function (req: any, res: any) {
+    let state: any = JSON.parse(await db.get('state'))
+    let released: number = await getReleased(state.blockNumber)
+    res.json({
+      blockNumber: state.blockNumber,
+      circulatingSupply: state.total + 55000000 - released,
+    })
+  })
+
+  app.get('/circulatingSupply', async function (req: any, res: any) {
+    let state: any = JSON.parse(await db.get('state'))
+    let released: number = await getReleased(state.blockNumber)
+    res.send((state.total + 55000000 - released).toString())
+  })
+
+  app.listen(4000, function () {
+    console.log('MIX Supply listening on port 4000')
+  })
+}
+
+async function start() {
+  console.log('Waiting for MIX IPC.')
+  await new Promise((resolve, reject) => {
+    let intervalId = setInterval(async () => {
+      try {
+        web3 = new Web3(new Web3.providers.IpcProvider(process.env.MIX_IPC_PATH!, net))
+        await web3.eth.getProtocolVersion()
+        clearInterval(intervalId)
+        resolve()
+      }
+      catch (e) {}
+    }, 1000)
+  })
+
+  web3.eth.defaultBlock = 'pending'
+  web3.eth.transactionConfirmationBlocks = 1
+
+  let blockNumber: number = await web3.eth.getBlockNumber()
+  console.log('Block:', blockNumber.toLocaleString())
+
+  db = levelup(leveldown('./db'))
+
+  await catchUp(blockNumber - 240)
+  console.log('Caught up.')
+
+  web3.eth.subscribe('newBlockHeaders')
+  .on('data', async (blockHeader: any) => {
+    await catchUp(blockHeader.number - 240)
+  })
+
+  startServer()
+}
+
+start()
