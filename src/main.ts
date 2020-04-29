@@ -70,14 +70,14 @@ async function startServer() {
     let released: number = await getReleased(state.blockNumber)
     res.json({
       blockNumber: state.blockNumber,
-      circulatingSupply: state.total + 55000000 - released,
+      circulatingSupply: state.total + released,
     })
   })
 
   app.get('/circulatingSupply', async function (req: any, res: any) {
     let state: any = JSON.parse(await db.get('state'))
     let released: number = await getReleased(state.blockNumber)
-    res.send((state.total + 55000000 - released).toString())
+    res.send((state.total + released).toString())
   })
 
   app.listen(4000, function () {
